@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <h2>{{person.name}} --- {{person.age}}</h2>
+        <h3>{{person.fav}}</h3>
+        <ul>
+            <li>1</li>
+            <li>2</li>
+            <li>3</li>
+        </ul>
+        <h3>{{msg}}</h3>
+        <div v-text="msg"></div>
+        <div v-text="person.fav"></div>
+        <div v-html="htmlStr"></div>
+        <input type="text" v-model="person.name">
+        <button v-on:click="handleClick">按钮v-on</button>
+        <button @click="handleClick">按钮@</button>
+    </div>
+    <script src="./js/Observer.src.js"></script>
+    <script src="./js/mVue.src.js"></script>
+    <script>
+        const vm = new mVue({
+            el: '#app',
+            data: {
+                person: {
+                    name: '这个是人的名字',
+                    age: 19,
+                    fav: 'ball'
+                },
+                msg: '这个一个msg的消息字符串',
+                htmlStr: '<h1>大大的H1</h1>'
+            },
+            methods: {
+                handleClick() {
+                    console.log(this);
+                    this.$data.msg = "修改了msg"
+                    this.$data.person.name = "修改了person.name"
+                }
+            }
+        })
+    </script>
+</body>
+</html>
