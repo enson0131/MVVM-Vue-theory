@@ -3,20 +3,25 @@
 
   ## 正文
   好了，废话不多说，接下来我们将通过俩方面开展我们对外在的追求，哦不，内在的追求。
+  
   1 了解vue双向数据绑定原理
+  
   2 了解原理后，对有趣的灵魂进行一波塑造，简单实现一个MVVM框架
 
   #### Vue实现双向数据绑定的做法
-  vue.js 是采用数据劫持结合发布者-订阅者模式的方式，通过Object.defineProperty()来劫持各个属性的setter，getter，在数据变动时发布消息给订阅者，触发相应的监听回调。
+  vue.js 是采用数据劫持结合观察者模式的方式，通过Object.defineProperty()来劫持各个属性的setter，getter，在数据变动时发布消息给观察者，触发相应的监听回调。
 
   #### 塑造有趣的灵魂
-  好了，我们了解了vue双向数据后，接下来就是实现一个简单的MVVM框架，既然我们知道vue是通过数据劫持结合发布者-订阅者模式实现的，那我们可以通过:
-  1、实现一个数据监听器Observer，能够对数据对象的所有属性进行监听，如有变动可拿到最新值并通知订阅者
-  2、实现一个指令解析器Compile，对每个元素节点的指令进行扫描和解析，根据指令模板替换数据，以及绑定相应的更新函数
-  3、实现一个Watcher，作为连接Observer和Compile的桥梁，能够订阅并收到每个属性变动的通知，执行指令绑定的相应回调函数，从而更新视图
-  4、实现一个MVVM入口类，对数据进行劫持的入口
+  好了，我们了解了vue双向数据后，接下来就是实现一个简单的MVVM框架，既然我们知道vue是通过数据劫持结合观察者模式实现的，那我们可以通过:
+  
+  - 1、实现一个数据监听器Observer，能够对数据对象的所有属性进行监听，如有变动可拿到最新值并通知观察者
+  
+  - 2、实现一个指令解析器Compile，对每个元素节点的指令进行扫描和解析，根据指令模板替换数据，以及绑定相应的更新函数
+  
+  - 3、实现一个Watcher，作为连接Observer和Compile的桥梁，能够收到每个属性变动的通知，执行指令绑定的相应回调函数，从而更新视图
+  
+  - 4、实现一个MVVM入口类，对数据进行劫持的入口
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20200508164531242.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NoZW5fZW5zb25fMQ==,size_16,color_FFFFFF,t_70)
 
 1 实现一个MVVM入口类
 先实现入口类，统一入口，进而通过获取的数据进行数据劫持和指令解析
@@ -37,11 +42,14 @@ class mVue {
 }
 ```
 2 实现一个数据监听器Observer类
-实例化Observer类，通过递归调用observe方法，获取data的每一个对象数据的值，并通过Object.defineProperty对数据的get/set进行劫持，在defineReactive 方法中通过闭包的方式创建数据依赖器Dep，每个属性维护一个Dep，记录自己的订阅者(即watcher)，notify通知每个订阅者执行相应的update方法，更新视图
-那么问题来了？ Dep要如何去记录自己的订阅者呢？
-很简单，维护一个数组subs，用来收集订阅者watcher，数据变动触发notify，再调用订阅者的update方法
+
+实例化Observer类，通过递归调用observe方法，获取data的每一个对象数据的值，并通过Object.defineProperty对数据的get/set进行劫持，在 defineReactive 方法中通过闭包的方式创建数据依赖器Dep，每个属性维护一个Dep，记录自己的观察者(即watcher)，notify通知每个观察者执行相应的update方法，更新视图
+
+那么问题来了？ Observer类要如何去记录自己的观察者watcher呢？
+
+很简单，维护一个数组subs，用来收集观察者watcher，数据变动触发notify，再调用观察者的update方法
+
 ```javascript
-// Publisher 发布者
 class Observer{
     constructor (data) {
         this.observe(data);
@@ -68,12 +76,12 @@ class Observer{
         const _this = this;
         // 递归遍历
         this.observe(value);
-        const dep = new Dep(); // 数据依赖器 每个属性维护一个Dep，记录自己的订阅者(即watcher)，notify通知每个订阅者执行相应的update方法，更新视图
+        const dep = new Dep(); // 数据依赖器 每个属性维护一个Dep，记录自己的观察者(即watcher)，notify通知每个观察者执行相应的update方法，更新视图
         Object.defineProperty(data, key, {
             enumerable: true,    // 可枚举
             configurable: false, // 不能再define
             get() {
-                // 订阅数据变化时，往Dep中去添加订阅者
+                // 数据变化时，往Dep中去添加观察者
                 Dep.target && dep.addSub(Dep.target)
                 return value
             },
@@ -81,7 +89,7 @@ class Observer{
                 _this.observe(newValue);
                 if(newValue !== value) {
                     value = newValue;
-                    // 通知数据依赖器dep，进而dep去通知订阅者做出更新
+                    // 通知数据依赖器dep，进而dep去通知观察者做出更新
                     dep.notify();
                 }
             }
@@ -109,13 +117,16 @@ class Dep {
 ```
 
 3  实现一个Watcher
-Watcher订阅者作为Observer和Compile之间通信的桥梁，主要做的事情是: 
-a、在自身实例化时往属性订阅器(dep)里面添加自己
+Watcher观察者作为Observer和Compile之间通信的桥梁，主要做的事情是: 
+
+a、在自身实例化时往属性观察器(dep)里面添加自己
+
 b、自身必须有一个update()方法
-c、待属性变动dep.notify ()通知时，能调用自身的update()方法，并触发Compile中绑定的回调函数cb，则功成身退
+
+c、待属性变动dep.notify()通知时，能调用自身的update()方法，并触发Compile中绑定的回调函数cb，则功成身退
 
 ```javascript
-// 订阅者
+// 观察者
 class Watcher {
     constructor (vm, expr, cb) {
         this.vm = vm;
@@ -141,7 +152,7 @@ class Watcher {
 ```
 
 4 实现一个指令解析器Compile
-compile主要做的事情是解析模板指令（例如v-html，v-text），将模板中的变量替换成数据，然后初始化渲染页面视图，并将每个指令对应的节点绑定更新函数，添加监听数据的订阅者，一旦数据有变动，收到通知，进而更新视图
+compile主要做的事情是解析模板指令（例如v-html，v-text），将模板中的变量替换成数据，然后初始化渲染页面视图，并将每个指令对应的节点绑定更新函数，添加监听数据的观察者，一旦数据有变动，收到通知，进而更新视图
 
 ```javascript
 class Compile {
@@ -235,10 +246,17 @@ class Compile {
 ```
 
 ## 总结
-好了，这样我们就大概塑造了一个有趣的灵魂了，这时候可能会有一些同学会有一些有趣的问题，例如：
+好了，这样我们就大概塑造了一个有趣的灵魂了，
+这里我们**主要对双向数据绑定原理的实现**，但对于模板的更新只是简单的进行DOM操作，**实际在在Vue源码中是通过虚拟VDOM + diff算法 结合更新队列去实现的，小伙伴有兴趣的话，可以深入Vue源码查看**。
+
+这时候可能会有一些同学会有一些有趣的问题，例如：
+
 1 发布订阅模式为何和观察者模式如此相似？
+
 这里简单说一下俩者的区别：
+
 a 观察者模式里，只有两个角色 —— 观察者 + 被观察者，发布订阅模式里存在着第三个中介
+
 b 观察者和被观察者，是松耦合的关系。 发布者和订阅者，则完全不存在耦合
 
 2 如何查看完整的代码?
